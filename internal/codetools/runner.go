@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -54,7 +55,7 @@ func (r *runner) start(command string, args []string, cwd string, useShell bool)
 	ctx, cancel := context.WithCancel(context.Background())
 	actualCommand := command
 	actualArgs := args
-	if useShell {
+	if useShell || shouldUseWindowsShell(command, args) {
 		actualCommand, actualArgs = shellCommand(command)
 	}
 	cmd := exec.CommandContext(ctx, actualCommand, actualArgs...)
@@ -99,6 +100,22 @@ func (r *runner) get(id string) (*process, bool) {
 	defer r.mu.Unlock()
 	p, ok := r.processes[id]
 	return p, ok
+}
+
+func shouldUseWindowsShell(command string, args []string) bool {
+	if runtime.GOOS != "windows" || len(args) > 0 {
+		return false
+	}
+	fields := strings.Fields(strings.ToLower(command))
+	if len(fields) == 0 {
+		return false
+	}
+	switch fields[0] {
+	case "dir", "cd", "copy", "del", "erase", "md", "mkdir", "move", "ren", "rename", "rd", "rmdir", "set", "type", "ver", "vol":
+		return true
+	default:
+		return strings.ContainsAny(command, "|&<>")
+	}
 }
 
 func shellCommand(command string) (string, []string) {

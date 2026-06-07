@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -103,6 +104,15 @@ func TestCommandLifecycle(t *testing.T) {
 	output := resultText(callMCPTool(t, server, "command_output", map[string]any{"command_id": id}))
 	if !strings.Contains(output, "hello") {
 		t.Fatalf("command output = %s", output)
+	}
+}
+
+func TestWindowsShellBuiltinsAreShellRouted(t *testing.T) {
+	if shouldUseWindowsShell("dir", nil) != (runtime.GOOS == "windows") {
+		t.Fatalf("dir shell routing mismatch for %s", runtime.GOOS)
+	}
+	if shouldUseWindowsShell("go", []string{"test"}) {
+		t.Fatal("real executable with args should not be shell-routed")
 	}
 }
 
