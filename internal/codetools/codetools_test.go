@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"tinychain/mcp"
+	"github.com/Bradthebrad/tinychain/mcp"
 )
 
 func TestToolsListAndFileWorkflow(t *testing.T) {

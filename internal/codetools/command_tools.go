@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"tinychain/mcp"
+	"github.com/Bradthebrad/tinychain/mcp"
 )
 
 func (c *CodeTools) runCommandTool() mcp.Tool {

@@ -1,6 +1,6 @@
 package codetools
 
-import "tinychain/mcp"
+import "github.com/Bradthebrad/tinychain/mcp"
 
 func (c *CodeTools) Tools() []mcp.Tool {
 	return []mcp.Tool{

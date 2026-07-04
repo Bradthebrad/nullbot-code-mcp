@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/Bradthebrad/nullbot-code-mcp/internal/codetools"
-	"tinychain/mcp"
+	"github.com/Bradthebrad/tinychain/mcp"
 )
 
 const version = "0.1.0"
