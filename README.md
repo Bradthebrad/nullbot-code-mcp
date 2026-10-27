@@ -1,65 +1,61 @@
-# nullbot-code-mcp
+# NullBot Code MCP
 
-`nullbot-code-mcp` is a small Go MCP server that exposes coding tools over stdio by default, with optional localhost HTTP and SSE transports.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/nullbot-code-mcp-dark.svg">
+  <img alt="How nullbot-code-mcp connects NullBot to the services it reaches" src="assets/nullbot-code-mcp-light.svg">
+</picture>
 
-It is designed for NullBot, but it is not NullBot-specific. Any MCP-capable client that can launch a stdio binary or connect to a local MCP endpoint can use it.
+`nullbot-code-mcp` gives an agent coding tools for one workspace folder: list, read, write, and edit files, search by file name or content, and run commands in the background. It is a standalone Go MCP server built on [`github.com/Bradthebrad/tinychain/mcp`](https://github.com/Bradthebrad/tinychain). It works with NullBot and with any MCP client, and uses stdio by default.
 
 ## Tools
 
-| Tool | Purpose |
+All paths are relative to the workspace folder.
+
+| Tool | What it does |
 | --- | --- |
-| `workspace_info` | Describe the active workspace root, path policy, and server limits. |
-| `list_dir` | List files/directories with metadata. |
-| `file_info` | Inspect one file or directory. |
-| `read_file` | Read bounded text content with optional line ranges. |
-| `write_file` | Create or overwrite text files, with `dry_run` support. |
-| `edit_file` | Exact string replacement with required replacement counts and `dry_run` support. |
-| `make_dir` | Create a directory and parents. |
-| `delete_path` | Delete a file or directory, with explicit recursive mode and `dry_run`. |
-| `search_files` | Find files by glob-style patterns. |
-| `search_text` | Search file content by literal text or regex. |
-| `run_command` | Start a workspace-scoped command asynchronously. |
-| `command_status` | Check command state and exit code. |
-| `command_output` | Read retained stdout/stderr from a command. |
-| `command_kill` | Cancel a running command. |
+| `workspace_info` | Shows the workspace folder, the path rule, and the read and command output limits. |
+| `list_dir` | Lists a folder's entries with type, size, and modified time, folders first. `max_items` defaults to 200; values above 1000 fall back to 200. |
+| `file_info` | Shows type, size, mode, and modified time for one file or folder. |
+| `read_file` | Reads a text file, or only lines `start_line` to `end_line` (1-based, inclusive). Output stops at `max_bytes`, which cannot exceed `--max-read-bytes`. |
+| `write_file` | Creates a text file and any missing parent folders. Fails if the file exists unless `overwrite` is true. `dry_run` reports what would be written. |
+| `edit_file` | Replaces exact text. Fails unless the number of matches equals `expected_replacements` (default 1). `dry_run` previews the change. |
+| `make_dir` | Creates a folder and its parents. |
+| `delete_path` | Deletes a file or an empty folder. A folder with contents needs `recursive: true`. `dry_run` previews. |
+| `search_files` | Finds files by glob pattern, such as `*.go`, `docs/*.md`, or `cmd/*/main.go`. `max_items` defaults to 200; values above 2000 fall back to 200. |
+| `search_text` | Searches file contents for literal text, or a regular expression with `regex: true`. Supports `ignore_case` and a `file_pattern` filter. Returns path, line number, and line text. `max_matches` defaults to 100; values above 1000 fall back to 100. |
+| `run_command` | Starts a command in the background and returns a `command_id`. Pass `command` and `args`, or set `shell: true` to run a shell snippet. `cwd` sets the working folder. |
+| `command_status` | Reports whether a command is still running, and its exit code once it has finished. |
+| `command_output` | Returns the kept stdout and stderr of a command, combined. `tail_bytes` returns only the newest bytes. |
+| `command_kill` | Cancels a running command. |
 
-## Safety Model
+Search details:
 
-All file paths are workspace-relative. Absolute paths are rejected, and file operations are checked so they cannot escape the configured workspace root.
+- `search_files` and `search_text` skip `.git`, `.hg`, `.svn`, `node_modules`, `.gocache`, `.gomodcache`, `dist`, and `vendor` folders.
+- A pattern without a slash, such as `*.go`, is matched against each file's name and so finds files at any depth. A pattern with a slash is matched against the whole relative path. `**/` matches zero or one folder level, not any depth.
+- `search_text` cuts matching lines to 500 bytes.
 
-Command execution is intentionally included because this is a coding MCP server. Clients should still ask users before running risky commands. The server starts commands asynchronously and caps retained output so noisy commands do not flood agent context.
+## Use it with NullBot
 
-## Build
+NullBot is a small, auditable Go agent ([Bradthebrad/nullbot](https://github.com/Bradthebrad/nullbot)) with a terminal UI and a headless CLI. Its main interface is the desktop app ([Bradthebrad/nullbot_ui](https://github.com/Bradthebrad/nullbot_ui)).
 
-```powershell
-go build -trimpath -ldflags "-s -w" -o nullbot-code-mcp.exe ./cmd/nullbot-code-mcp
-```
+1. In the desktop app, open **Tools > Marketplace** and choose **Install** on NullBot Code MCP. **Check for updates** refreshes the catalog from GitHub releases. The Marketplace installs the latest release, currently `v0.1.0`.
+2. NullBot installs the server to `~/.nullbot/mcp/nullbot-code-mcp` and, when the release has a `SHA256SUMS.txt`, verifies the binary against it.
+3. NullBot starts the server over stdio with `--workspace` set to the folder of your primary project.
 
-## Run
+NullBot checks every tool call against the permission of the project it touches: Read only, Read & write, Full, or Custom. Full is needed to run programs. Where projects overlap, the stricter one wins. A call that names no folder is judged by the primary project.
 
-Default stdio mode:
+NullBot works out what each tool needs (read, write, delete, or run) from the server's hints and the tool's name. You can change it per tool on the Tools page. This server sends no hints, so the names decide. With NullBot's current rules:
 
-```powershell
-.\nullbot-code-mcp.exe --workspace C:\path\to\project
-```
+- `run_command`, `command_status`, `command_output`, and `command_kill` need run, so they only work in a Full project. The last three count as run because their names contain "command".
+- `delete_path` needs delete.
+- `write_file`, `edit_file`, and `make_dir` need write.
+- All other tools need read.
 
-Streamable HTTP-style endpoint:
+To build a server like this one, see the [mcp-skill](https://github.com/Bradthebrad/nullbot-skills/tree/main/skills/mcp-skill) package in Bradthebrad/nullbot-skills.
 
-```powershell
-.\nullbot-code-mcp.exe --transport streamable-http --addr 127.0.0.1:8765 --path /mcp --workspace C:\path\to\project
-```
+## Use it with another MCP client
 
-Legacy SSE-compatible endpoints:
-
-```powershell
-.\nullbot-code-mcp.exe --transport sse --addr 127.0.0.1:8765 --sse-path /sse --message-path /message --workspace C:\path\to\project
-```
-
-## Claude / Other MCP Clients
-
-Use the compiled executable as a stdio MCP server. The exact config format varies by client, but the command should point to `nullbot-code-mcp.exe` and pass a `--workspace` argument.
-
-Conceptually:
+Point the client at the binary and pass `--workspace`. The config format varies by client; a common shape is:
 
 ```json
 {
@@ -72,21 +68,80 @@ Conceptually:
 }
 ```
 
-## Transport Flags
+Without `--workspace`, the server uses the folder it was started in.
+
+## Configuration
+
+### Flags
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
 | `--transport` | `stdio` | `stdio`, `streamable-http`, `http`, or `sse`. |
-| `--addr` | `127.0.0.1:8765` | Listen address for HTTP/SSE transports. |
-| `--path` | `/mcp` | Streamable HTTP JSON-RPC endpoint. |
+| `--addr` | `127.0.0.1:8765` | Listen address for the HTTP and SSE transports. |
+| `--path` | `/mcp` | Streamable HTTP endpoint. |
 | `--sse-path` | `/sse` | Legacy SSE endpoint. |
 | `--message-path` | `/message` | Legacy SSE message endpoint. |
-| `--workspace` | `.` | Workspace root for coding tools. |
-| `--max-read-bytes` | `524288` | Maximum bytes returned by `read_file`. |
-| `--max-command-bytes` | `131072` | Retained command output bytes per command. |
+| `--workspace` | `.` | Workspace folder. File tools cannot leave it. |
+| `--max-read-bytes` | `524288` | Most bytes `read_file` returns. |
+| `--max-command-bytes` | `131072` | Most output bytes kept per command. |
+| `--version` | `false` | Print the version and exit. |
 
-## Development
+### Environment variables
+
+The server reads no environment variables. Commands started by `run_command` inherit the server's environment.
+
+### Transports
+
+Default stdio:
+
+```powershell
+.\nullbot-code-mcp.exe --workspace C:\path\to\project
+```
+
+Streamable HTTP (`http` is the same transport):
+
+```powershell
+.\nullbot-code-mcp.exe --transport streamable-http --addr 127.0.0.1:8765 --path /mcp --workspace C:\path\to\project
+```
+
+Legacy SSE:
+
+```powershell
+.\nullbot-code-mcp.exe --transport sse --addr 127.0.0.1:8765 --sse-path /sse --message-path /message --workspace C:\path\to\project
+```
+
+## Safety
+
+File access:
+
+- Every path must be relative to the workspace. Absolute paths are rejected, and so are paths that leave the workspace with `..`.
+- A symlinked folder that points outside the workspace is rejected. A symlinked file is not always checked: when the link's name has an extension, only its parent folder is resolved, so a link such as `notes.txt` can point outside the workspace. Do not keep such links in a workspace you give to an agent.
+- `write_file` does not replace an existing file unless `overwrite` is true.
+- `delete_path` refuses to delete the workspace folder itself, and deletes folders with contents only when `recursive` is true.
+- `write_file`, `edit_file`, and `delete_path` accept `dry_run` to preview a change.
+
+Commands:
+
+- Command execution is included on purpose, because this is a coding server. The working folder must be inside the workspace, but the command itself runs with the server's user rights and can reach anything that user can. Clients should ask the user before running risky commands.
+- Commands run in the background and have no time limit. Use `command_kill` to stop one.
+- Output is capped at `--max-command-bytes` per command. When a command prints more, the oldest bytes are dropped, so noisy commands do not flood the agent's context.
+- `shell: true` runs the command through `cmd.exe /C` on Windows and `sh -c` elsewhere. Prefer `command` plus `args`.
+- On Windows, a command with no `args` is sent through `cmd.exe /C` automatically when it starts with a `cmd` built-in (`dir`, `cd`, `copy`, `del`, `erase`, `md`, `mkdir`, `move`, `ren`, `rename`, `rd`, `rmdir`, `set`, `type`, `ver`, `vol`) or contains `|`, `&`, `<`, or `>`.
+
+Network:
+
+- The HTTP and SSE transports have no authentication. Keep `--addr` on `127.0.0.1`.
+
+## Build and test
+
+The module needs Go 1.26.4 (from `go.mod`) and depends on `github.com/Bradthebrad/tinychain` v0.2.0.
 
 ```powershell
 go test ./...
+go vet ./...
+go build -trimpath -ldflags "-s -w" -o nullbot-code-mcp.exe ./cmd/nullbot-code-mcp
 ```
+
+On Linux or macOS, drop the `.exe` from the output name. `nullbot-code-mcp --version` prints the version.
+
+On 2026-10-27, `go vet ./...` and `go test ./...` passed with Go 1.26.4 on Linux.
