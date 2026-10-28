@@ -147,3 +147,33 @@ func resultText(result mcp.ToolResult) string {
 	}
 	return out.String()
 }
+
+func TestPathsMayBeAbsoluteInsideTheWorkspaceButNotLinkedOut(t *testing.T) {
+	dir, outside := t.TempDir(), t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("outside"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	c, err := New(Config{Workspace: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := c.resolve(filepath.Join(c.root, "main.go")); err != nil || filepath.Base(got) != "main.go" {
+		t.Fatalf("absolute path inside the workspace: %q, %v", got, err)
+	}
+	if got, err := c.resolve(""); err != nil || got != c.root {
+		t.Fatalf("empty path should be the workspace: %q, %v", got, err)
+	}
+	if _, err := c.resolve(filepath.Join(outside, "secret.txt")); err == nil {
+		t.Fatal("absolute path outside the workspace accepted")
+	}
+	// A linked file with an extension used to be followed out of the workspace.
+	if err := os.Symlink(filepath.Join(outside, "secret.txt"), filepath.Join(dir, "notes.txt")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	if _, err := c.resolve("notes.txt"); err == nil || !strings.Contains(err.Error(), "through a link") {
+		t.Fatalf("linked file outside the workspace: %v", err)
+	}
+}
