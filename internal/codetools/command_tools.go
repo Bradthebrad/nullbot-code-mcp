@@ -17,7 +17,7 @@ func (c *CodeTools) runCommandTool() mcp.Tool {
 		InputSchema: schema(map[string]any{
 			"command":    stringProp("Executable name, or a shell command when shell=true."),
 			"args":       arrayStringProp("Arguments passed to command when shell=false."),
-			"cwd":        stringProp("Workspace-relative working directory. Defaults to workspace root."),
+			"cwd":        stringProp("Working directory in the workspace, relative or absolute. Defaults to workspace root."),
 			"shell":      boolProp("Run through cmd.exe /C on Windows or sh -c elsewhere. Defaults to false."),
 			"reason":     stringProp("Short explanation of why this command is being run."),
 			"max_output": numberProp("Reserved for clients; server currently uses its configured max command output."),

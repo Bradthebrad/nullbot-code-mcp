@@ -55,43 +55,14 @@ func New(config Config) (*CodeTools, error) {
 	}, nil
 }
 
+// resolve turns a tool's path argument into a path inside the workspace,
+// relative to it or absolute. Links that lead outside are refused, whether
+// they are folders or files.
 func (c *CodeTools) resolve(rel string) (string, error) {
-	if rel == "" {
+	if strings.TrimSpace(rel) == "" {
 		rel = "."
 	}
-	if filepath.IsAbs(rel) {
-		return "", fmt.Errorf("absolute paths are not allowed: %s", rel)
-	}
-	clean := filepath.Clean(rel)
-	full := filepath.Join(c.root, clean)
-	parent := full
-	if filepath.Ext(full) != "" {
-		parent = filepath.Dir(full)
-	}
-	if resolved, err := filepath.EvalSymlinks(parent); err == nil {
-		if err := c.ensureInside(resolved); err != nil {
-			return "", err
-		}
-	}
-	if err := c.ensureInside(full); err != nil {
-		return "", err
-	}
-	return full, nil
-}
-
-func (c *CodeTools) ensureInside(path string) error {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return err
-	}
-	if abs == c.root {
-		return nil
-	}
-	prefix := c.root + string(os.PathSeparator)
-	if !strings.HasPrefix(abs, prefix) {
-		return fmt.Errorf("path escapes workspace: %s", path)
-	}
-	return nil
+	return confine(c.root, rel)
 }
 
 func (c *CodeTools) rel(path string) string {

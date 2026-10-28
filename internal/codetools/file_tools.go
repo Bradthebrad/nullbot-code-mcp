@@ -31,9 +31,9 @@ func (c *CodeTools) workspaceInfoTool() mcp.Tool {
 func (c *CodeTools) listDirTool() mcp.Tool {
 	return mcp.Tool{
 		Name:        "list_dir",
-		Description: "List files and directories under a workspace-relative directory. Returns names, type, size, and modification time.",
+		Description: "List files and directories under a directory. Returns names, type, size, and modification time.",
 		InputSchema: schema(map[string]any{
-			"path":      stringProp("Workspace-relative directory path. Defaults to the workspace root."),
+			"path":      stringProp("Directory path in the workspace, relative or absolute. Defaults to the workspace root."),
 			"max_items": numberProp("Maximum entries to return. Defaults to 200."),
 		}),
 		Handler: func(ctx context.Context, args map[string]any) (mcp.ToolResult, error) {
@@ -96,9 +96,9 @@ func (c *CodeTools) listDirTool() mcp.Tool {
 func (c *CodeTools) fileInfoTool() mcp.Tool {
 	return mcp.Tool{
 		Name:        "file_info",
-		Description: "Return metadata for a workspace-relative file or directory.",
+		Description: "Return metadata for a file or directory in the workspace.",
 		InputSchema: schema(map[string]any{
-			"path": stringProp("Workspace-relative path."),
+			"path": stringProp("Path in the workspace, relative or absolute."),
 		}, "path"),
 		Handler: func(ctx context.Context, args map[string]any) (mcp.ToolResult, error) {
 			path, err := c.resolve(textArg(args, "path"))
@@ -129,7 +129,7 @@ func (c *CodeTools) readFileTool() mcp.Tool {
 		Name:        "read_file",
 		Description: "Read a UTF-8-ish text file from the workspace. Supports optional 1-based line ranges and caps output to protect context.",
 		InputSchema: schema(map[string]any{
-			"path":       stringProp("Workspace-relative file path."),
+			"path":       stringProp("File path in the workspace, relative or absolute."),
 			"start_line": numberProp("Optional 1-based first line to return."),
 			"end_line":   numberProp("Optional 1-based final line to return, inclusive."),
 			"max_bytes":  numberProp("Optional byte cap. Defaults to server max_read_bytes."),
@@ -177,9 +177,9 @@ func (c *CodeTools) readFileTool() mcp.Tool {
 func (c *CodeTools) writeFileTool() mcp.Tool {
 	return mcp.Tool{
 		Name:        "write_file",
-		Description: "Create or replace a workspace-relative text file. Parent directories are created when needed. Use dry_run first for risky writes.",
+		Description: "Create or replace a text file in the workspace. Parent directories are created when needed. Use dry_run first for risky writes.",
 		InputSchema: schema(map[string]any{
-			"path":      stringProp("Workspace-relative file path."),
+			"path":      stringProp("File path in the workspace, relative or absolute."),
 			"content":   stringProp("Full file content to write."),
 			"overwrite": boolProp("Whether to replace an existing file. Defaults to false."),
 			"dry_run":   boolProp("Preview the write without changing disk."),
@@ -221,7 +221,7 @@ func (c *CodeTools) editFileTool() mcp.Tool {
 		Name:        "edit_file",
 		Description: "Perform exact string replacement in a workspace file. Fails unless the expected replacement count matches. Use dry_run to preview.",
 		InputSchema: schema(map[string]any{
-			"path":                  stringProp("Workspace-relative file path."),
+			"path":                  stringProp("File path in the workspace, relative or absolute."),
 			"old_text":              stringProp("Exact text to replace."),
 			"new_text":              stringProp("Replacement text."),
 			"expected_replacements": numberProp("Required number of replacements. Defaults to 1."),
@@ -268,9 +268,9 @@ func (c *CodeTools) editFileTool() mcp.Tool {
 func (c *CodeTools) makeDirTool() mcp.Tool {
 	return mcp.Tool{
 		Name:        "make_dir",
-		Description: "Create a workspace-relative directory and parents if needed.",
+		Description: "Create a directory and parents if needed.",
 		InputSchema: schema(map[string]any{
-			"path": stringProp("Workspace-relative directory path."),
+			"path": stringProp("Directory path in the workspace, relative or absolute."),
 		}, "path"),
 		Handler: func(ctx context.Context, args map[string]any) (mcp.ToolResult, error) {
 			path, err := c.resolve(textArg(args, "path"))
@@ -290,7 +290,7 @@ func (c *CodeTools) deletePathTool() mcp.Tool {
 		Name:        "delete_path",
 		Description: "Delete a file or empty directory inside the workspace. Recursive deletion requires recursive=true and is intentionally explicit.",
 		InputSchema: schema(map[string]any{
-			"path":      stringProp("Workspace-relative path to delete."),
+			"path":      stringProp("Path to delete, in the workspace."),
 			"recursive": boolProp("Delete directories recursively. Defaults to false."),
 			"dry_run":   boolProp("Preview without deleting."),
 		}, "path"),

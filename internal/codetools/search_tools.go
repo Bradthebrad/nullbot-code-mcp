@@ -19,7 +19,7 @@ func (c *CodeTools) searchFilesTool() mcp.Tool {
 		Description: "Find workspace files by glob-style name pattern. Useful for locating modules, configs, tests, docs, and generated files without reading file content.",
 		InputSchema: schema(map[string]any{
 			"pattern":   stringProp("Glob pattern matched against slash paths and base names, such as *.go, **/README.md, or cmd/*/main.go."),
-			"path":      stringProp("Optional workspace-relative directory to search. Defaults to workspace root."),
+			"path":      stringProp("Optional directory in the workspace to search. Defaults to workspace root."),
 			"max_items": numberProp("Maximum files to return. Defaults to 200."),
 		}, "pattern"),
 		Handler: func(ctx context.Context, args map[string]any) (mcp.ToolResult, error) {
@@ -80,7 +80,7 @@ func (c *CodeTools) searchTextTool() mcp.Tool {
 		Description: "Search text files in the workspace by literal text or regular expression. Returns file paths, line numbers, and matching line snippets.",
 		InputSchema: schema(map[string]any{
 			"query":        stringProp("Text or regular expression to search for."),
-			"path":         stringProp("Optional workspace-relative directory or file to search. Defaults to workspace root."),
+			"path":         stringProp("Optional directory or file in the workspace to search. Defaults to workspace root."),
 			"file_pattern": stringProp("Optional glob pattern for file names or slash paths, such as *.go or **/*.md."),
 			"regex":        boolProp("Treat query as a regular expression. Defaults to false."),
 			"ignore_case":  boolProp("Case-insensitive search."),

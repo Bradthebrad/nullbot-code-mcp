@@ -38,7 +38,7 @@ Search details:
 
 NullBot is a small, auditable Go agent ([Bradthebrad/nullbot](https://github.com/Bradthebrad/nullbot)) with a terminal UI and a headless CLI. Its main interface is the desktop app ([Bradthebrad/nullbot_ui](https://github.com/Bradthebrad/nullbot_ui)).
 
-1. In the desktop app, open **Tools > Marketplace** and choose **Install** on NullBot Code MCP. **Check for updates** refreshes the catalog from GitHub releases. The Marketplace installs the latest release, currently `v0.1.0`.
+1. In the desktop app, open **Tools > Marketplace** and choose **Install** on NullBot Code MCP. Install always fetches the newest release (`v0.3.0` as of this writing) and checks it against the release's `SHA256SUMS.txt`; **Check for updates** refreshes the catalog's listing.
 2. NullBot installs the server to `~/.nullbot/mcp/nullbot-code-mcp` and, when the release has a `SHA256SUMS.txt`, verifies the binary against it.
 3. NullBot starts the server over stdio with `--workspace` set to the folder of your primary project.
 
@@ -114,8 +114,8 @@ Legacy SSE:
 
 File access:
 
-- Every path must be relative to the workspace. Absolute paths are rejected, and so are paths that leave the workspace with `..`.
-- A symlinked folder that points outside the workspace is rejected. A symlinked file is not always checked: when the link's name has an extension, only its parent folder is resolved, so a link such as `notes.txt` can point outside the workspace. Do not keep such links in a workspace you give to an agent.
+- A path may be relative to the workspace or absolute, as long as it is inside the workspace; paths that leave it, with `..` or an absolute path elsewhere, are refused, and the error names the workspace so the agent can correct the path.
+- Links are resolved: a file or folder link inside the workspace that points outside it is refused, for reads and writes.
 - `write_file` does not replace an existing file unless `overwrite` is true.
 - `delete_path` refuses to delete the workspace folder itself, and deletes folders with contents only when `recursive` is true.
 - `write_file`, `edit_file`, and `delete_path` accept `dry_run` to preview a change.
